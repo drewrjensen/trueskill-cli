@@ -3,7 +3,7 @@ from models import Player, Team, Match
 
 def init_db():
   if not os.path.exists('league.db'):
-    with open('setup-db.sql') as f:
+    with open('schemas.sql') as f:
       sql = f.read()
     conn = sqlite3.connect('league.db')
     conn.executescript(sql)
