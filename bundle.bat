@@ -1,0 +1,1 @@
+pyinstaller --onefile --add-data "schemas.sql;." cli.py

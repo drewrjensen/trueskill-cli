@@ -1,9 +1,13 @@
-import sqlite3, os
+import os, sqlite3, sys
 from models import Player, Team, Match
+
+def resource_path(filename):
+  base = getattr(sys, '_MEIPASS', os.path.abspath("."))
+  return os.path.join(base, filename)
 
 def init_db():
   if not os.path.exists('league.db'):
-    with open('schemas.sql') as f:
+    with open(resource_path('schemas.sql')) as f:
       sql = f.read()
     conn = sqlite3.connect('league.db')
     conn.executescript(sql)
