@@ -26,7 +26,7 @@ def load_db():
     player = next(p for p in players if p.id == player_id)
     team.players.append(player)
 
-  c.execute("SELECT id FROM matches")
+  c.execute("SELECT id, datetime FROM matches")
   matches = [Match(row[0]) for row in c.fetchall()]
 
   c.execute("SELECT match_id, team_id, place, score FROM match_teams")
@@ -49,7 +49,7 @@ def save_db(players, teams, matches):
 
   c.execute("DELETE FROM teams")
   for t in teams:
-    c.execute("INSERT INTO teams (id) VALUES (?)", (t.id,))
+    c.execute("INSERT INTO teams (id) VALUES (?)", (t.id))
 
   c.execute("DELETE FROM team_players")
   for t in teams:
@@ -58,7 +58,7 @@ def save_db(players, teams, matches):
 
   c.execute("DELETE FROM matches")
   for m in matches:
-    c.execute("INSERT INTO matches (id) VALUES (?)", (m.id,))
+    c.execute("INSERT INTO matches (id) VALUES (?, ?)", (m.id, m.datetime))
 
   c.execute("DELETE FROM match_teams")
   for m in matches:

@@ -1,10 +1,12 @@
 import argparse
 import ast
+from collections import defaultdict
 from datetime import datetime
 from db import load_db, save_db
-from models import Player, Match, Team
+from models import Match, Player, Team, recalculate_ratings_from
 from ratings import update_ratings
 import sys
+from trueskill import Rating
 
 players, teams, matches = [], [], []
 
@@ -39,7 +41,6 @@ def show_rankings():
 
 def add_match(input_str):
   try:
-    # Parse: "Drew,Emily,[Ridge,Spencer]"
     entries = ast.literal_eval(f"[{input_str}]")
     resolved = []
     for entry in entries:
@@ -48,12 +49,95 @@ def add_match(input_str):
       else:
         team = [next(p for p in players if p.name == entry)]
       resolved.append(team)
+
     update_ratings(*resolved)
+
+    # Record match in DB
+    match_id = max((m.id for m in matches), default=0) + 1
+    match = Match(id=match_id)
+    for place, team_players in enumerate(resolved, start=1):
+      team_id = max((t.id for t in teams), default=0) + 1
+      team = Team(id=team_id, players=team_players)
+      teams.append(team)
+      match.match_teams.append({'team': team, 'place': place, 'score': None})
+    recalculate_ratings_from(match.played_at, players, matches)
+    matches.append(match)
+
     save()
-    print("Match recorded.")
+    print(f"Match recorded at {match.played_at}")
   except Exception as e:
-    print(f"Error: {e}")
+    print(f"Error adding match: {e}")
     sys.exit(1)
+
+def list_matches():
+  if not matches:
+    print("No matches recorded.")
+    return
+
+  grouped = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+
+  for match in matches:
+    dt = datetime.fromisoformat(match.played_at)
+    grouped[dt.year][dt.month][dt.day].append(match)
+
+  for year in sorted(grouped):
+    print(f"{year}:")
+    for month in sorted(grouped[year]):
+      print(f"  {month:02}:")
+      for day in sorted(grouped[year][month]):
+        print(f"    {day:02}:")
+        for match in grouped[year][month][day]:
+          team_descriptions = []
+          for entry in match.match_teams:
+            names = ", ".join(p.name for p in entry['team'].players)
+            team_descriptions.append(f"[{names}]")
+          print(f"      {match.played_at} → {' > '.join(team_descriptions)}")
+
+def edit_match(datetime_str):
+  try:
+    match = next(m for m in matches if m.played_at.startswith(datetime_str))
+  except StopIteration:
+    print(f"No match found with timestamp {datetime_str}")
+    return
+
+  print(f"Editing match from {match.played_at}")
+  for i, entry in enumerate(match.match_teams, start=1):
+    names = ", ".join(p.name for p in entry['team'].players)
+    print(f"  {i}. {names}")
+
+  new_input = input("Enter new participants (comma-separated, use brackets for teams): ")
+  try:
+    entries = ast.literal_eval(f"[{new_input}]")
+    resolved = []
+    for entry in entries:
+      if isinstance(entry, list):
+        team = [next(p for p in players if p.name == name) for name in entry]
+      else:
+        team = [next(p for p in players if p.name == entry)]
+      resolved.append(team)
+
+    # Replace teams and match teams
+    new_match_teams = []
+    for place, team_players in enumerate(resolved, start=1):
+      team_id = max((t.id for t in teams), default=0) + 1
+      team = Team(id=team_id, players=team_players)
+      teams.append(team)
+      new_match_teams.append({'team': team, 'place': place, 'score': None})
+    match.match_teams = new_match_teams
+
+    recalculate_ratings_from(match.played_at, players, matches)
+    save()
+    print("Match updated.")
+
+    # Reset all player ratings
+    for player in players:
+      player.trueskill = Rating()
+
+    # Re-apply every match in order
+    for match in sorted(matches, key=lambda m: m.played_at):
+      recalculate_ratings_from(match.played_at, players, matches)
+  except Exception as e:
+    print(f"Failed to edit match: {e}")
 
 def main():
   load()
@@ -90,9 +174,9 @@ def main():
     if args.action == 'add' and args.arg:
       add_match(args.arg)
     elif args.action == 'list':
-      print("[match list UI here]")
+      list_matches()
     elif args.action == 'edit' and args.arg:
-      print(f"[edit match at {args.arg}]")
+      edit_match(args.arg)
 
   else:
     parser.print_help()
