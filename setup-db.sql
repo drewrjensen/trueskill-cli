@@ -1,9 +1,8 @@
 create table players (
   id integer primary key autoincrement,
   name text not null,
-  elo integer not null default 0,
-  glicko integer not null default 0,
-  trueskill integer not null default 0
+  mu real not null default 25.0,
+  sigma real not null default 8.3333333
 );
 
 create table teams (
@@ -17,7 +16,8 @@ create table team_players (
 );
 
 create table matches (
-  id integer primary key autoincrement
+  id integer primary key autoincrement,
+  datetime text default (datetime('now'))
 );
 
 create table match_teams (
@@ -25,5 +25,5 @@ create table match_teams (
   match_id integer not null references matches(id) on delete cascade,
   team_id integer not null references teams(id) on delete cascade,
   place integer check (place > 0), -- may be null
-  score integer check (score >= 0), -- may be null
+  score integer check (score >= 0) -- may be null
 );
