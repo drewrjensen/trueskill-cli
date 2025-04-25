@@ -2,9 +2,15 @@ name: Build CLI Executables
 
 on:
   push:
-    branches: [ main, dev ]
+    branches:
+      - main
+      - dev
+    tags:
+      - 'v*'  # Version tags like v1.0.0
   pull_request:
-  workflow_dispatch:
+    branches:
+      - main
+      - dev
 
 jobs:
   build:
@@ -32,10 +38,28 @@ jobs:
 
       - name: Build executable
         run: |
-          pyinstaller --onefile --add-data "schemas.sql:." cli.py
+          pyinstaller --onefile --add-data "setup-db.sql:." cli.py
 
-      - name: Upload artifact
+      - name: Rename output
+        run: |
+          mkdir output
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            cp dist/cli.exe output/trueskill-cli.exe
+          else
+            cp dist/cli output/trueskill-cli
+          fi
+
+      - name: Upload release (only on versioned tag pushes to main)
+        if: startsWith(github.ref, 'refs/tags/v') && github.ref_protected == 'true'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: output/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifact (for PRs or branch pushes)
+        if: github.event_name != 'push' || !startsWith(github.ref, 'refs/tags/')
         uses: actions/upload-artifact@v4
         with:
           name: trueskill-cli-${{ matrix.os }}
-          path: dist/
+          path: output/
