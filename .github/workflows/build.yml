@@ -38,7 +38,11 @@ jobs:
 
       - name: Build executable
         run: |
-          pyinstaller --onefile --add-data "schemas.sql:." cli.py
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            pyinstaller --onefile --add-data "schemas.sql;." cli.py
+          else
+            pyinstaller --onefile --add-data "schemas.sql:." cli.py
+          fi
 
       - name: Rename output
         run: |
