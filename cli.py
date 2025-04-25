@@ -5,6 +5,7 @@ from datetime import datetime
 from db import init_db, load_db, save_db
 from models import Match, Player, Team, recalculate_ratings_from
 from ratings import update_ratings
+import re
 import sys
 from trueskill import Rating
 
@@ -41,18 +42,16 @@ def show_rankings():
 
 def add_match(input_str):
   try:
-    entries = ast.literal_eval(f"[{input_str}]")
+    parsed = parse_participants(input_str)
     resolved = []
-    for entry in entries:
-      if isinstance(entry, list):
-        team = [next(p for p in players if p.name == name) for name in entry]
-      else:
-        team = [next(p for p in players if p.name == entry)]
-      resolved.append(team)
+    for team in parsed:
+      players_in_team = [next(p for p in players if p.name == name) for name in team]
+      resolved.append(players_in_team)
 
+    # Update ratings
     update_ratings(*resolved)
 
-    # Record match in DB
+    # Record match
     match_id = max((m.id for m in matches), default=0) + 1
     match = Match(id=match_id)
     for place, team_players in enumerate(resolved, start=1):
@@ -60,14 +59,13 @@ def add_match(input_str):
       team = Team(id=team_id, players=team_players)
       teams.append(team)
       match.match_teams.append({'team': team, 'place': place, 'score': None})
-    recalculate_ratings_from(match.played_at, players, matches)
+    match.played_at = datetime.now().isoformat(timespec='minutes')
     matches.append(match)
 
     save()
     print(f"Match recorded at {match.played_at}")
   except Exception as e:
     print(f"Error adding match: {e}")
-    sys.exit(1)
 
 def list_matches():
   if not matches:
@@ -77,7 +75,7 @@ def list_matches():
   grouped = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
 
   for match in matches:
-    dt = datetime.fromisoformat(match.played_at)
+    dt = datetime.fromisoformat(match.datetime)
     grouped[dt.year][dt.month][dt.day].append(match)
 
   for year in sorted(grouped):
@@ -91,16 +89,16 @@ def list_matches():
           for entry in match.match_teams:
             names = ", ".join(p.name for p in entry['team'].players)
             team_descriptions.append(f"[{names}]")
-          print(f"      {match.played_at} → {' > '.join(team_descriptions)}")
+          print(f"      {match.datetime} → {' > '.join(team_descriptions)}")
 
 def edit_match(datetime_str):
   try:
-    match = next(m for m in matches if m.played_at.startswith(datetime_str))
+    match = next(m for m in matches if m.datetime.startswith(datetime_str))
   except StopIteration:
     print(f"No match found with timestamp {datetime_str}")
     return
 
-  print(f"Editing match from {match.played_at}")
+  print(f"Editing match from {match.datetime}")
   for i, entry in enumerate(match.match_teams, start=1):
     names = ", ".join(p.name for p in entry['team'].players)
     print(f"  {i}. {names}")
@@ -125,7 +123,7 @@ def edit_match(datetime_str):
       new_match_teams.append({'team': team, 'place': place, 'score': None})
     match.match_teams = new_match_teams
 
-    recalculate_ratings_from(match.played_at, players, matches)
+    recalculate_ratings_from(match.datetime, players, matches)
     save()
     print("Match updated.")
 
@@ -134,10 +132,40 @@ def edit_match(datetime_str):
       player.trueskill = Rating()
 
     # Re-apply every match in order
-    for match in sorted(matches, key=lambda m: m.played_at):
-      recalculate_ratings_from(match.played_at, players, matches)
+    for match in sorted(matches, key=lambda m: m.datetime):
+      recalculate_ratings_from(match.datetime, players, matches)
   except Exception as e:
     print(f"Failed to edit match: {e}")
+
+def parse_participants(input_str):
+  """
+  Parse input like 'Ham,bobthecop11,[SabbaticGoat,gingikinz]'
+  into [['Ham'], ['bobthecop11'], ['SabbaticGoat', 'gingikinz']]
+  """
+  participants = []
+  buffer = ""
+  inside_team = False
+
+  for char in input_str:
+    if char == '[':
+      inside_team = True
+      buffer = ""
+    elif char == ']':
+      inside_team = False
+      team = [name.strip() for name in buffer.split(',') if name.strip()]
+      participants.append(team)
+      buffer = ""
+    elif char == ',' and not inside_team:
+      if buffer.strip():
+        participants.append([buffer.strip()])
+      buffer = ""
+    else:
+      buffer += char
+
+  if buffer.strip():
+    participants.append([buffer.strip()])
+
+  return participants
 
 def main():
   init_db()
