@@ -2,7 +2,7 @@ name: Build CLI Executables
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, dev ]
   pull_request:
   workflow_dispatch:
 
