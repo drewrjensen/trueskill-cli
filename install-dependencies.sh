@@ -1,4 +1,8 @@
+echo -n "Activating virtual environment..."
 python -m venv venv
-source venv/Scripts/activate
-py -m pip install --upgrade pip || python -m pip install --upgrade pip || python3 -m pip install --upgrade pip
-pip install pyinstaller trueskill
+source venv/bin/activate
+echo "done"
+
+echo -n "Installing dependencies..."
+venv/bin/pip install pyinstaller trueskill
+echo "done"
