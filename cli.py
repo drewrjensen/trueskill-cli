@@ -1,38 +1,110 @@
-import argparse
 import ast
+import copy
+import shutil
 from collections import defaultdict
 from datetime import datetime
+from prompt_toolkit import prompt
+from prompt_toolkit.completion import WordCompleter
+from rapidfuzz import process
 from db import init_db, load_db, save_db
 from models import Match, Player, Team, recalculate_ratings_from
 from ratings import update_ratings
-import re
-import sys
-from trueskill import Rating
 
 players, teams, matches = [], [], []
+previous_state = None  # Snapshot for undo
 
 def load():
   global players, teams, matches
   players, teams, matches = load_db()
 
 def save():
+  global previous_state
+  previous_state = (
+    copy.deepcopy(players),
+    copy.deepcopy(teams),
+    copy.deepcopy(matches),
+  )
   save_db(players, teams, matches)
 
-def list_players():
-  for p in sorted(players, key=lambda p: p.name):
-    print(f"{p.name} — μ={p.mu:.2f}, σ={p.sigma:.2f}")
+# ----------------
+# Helpers
+# ----------------
 
-def add_player(name):
-  if any(p.name == name for p in players):
-    print("Player already exists.")
-  new_id = max((p.id for p in players), default=0) + 1
-  players.append(Player(new_id, name, mu=25.0, sigma=8.333))
+def find_player(name):
+  """Find a player by name (case insensitive), or fuzzy suggest."""
+  lowered = name.lower()
+  for p in players:
+    if p.name.lower() == lowered:
+      return p
+
+  # Fuzzy match if exact match not found
+  player_names = [p.name for p in players]
+  matches = process.extract(name, player_names, limit=1, score_cutoff=80)
+  if matches:
+    suggestion, score, _ = matches[0]
+    print(f"No exact match for '{name}'. Did you mean '{suggestion}'?")
+    return next(p for p in players if p.name == suggestion)
+
+  return None
+
+def parse_participants(input_str):
+  participants = []
+  buffer = ""
+  inside_team = False
+  for char in input_str:
+    if char == '[':
+      inside_team = True
+      buffer = ""
+    elif char == ']':
+      inside_team = False
+      team = [name.strip() for name in buffer.split(',') if name.strip()]
+      participants.append(team)
+      buffer = ""
+    elif char == ',' and not inside_team:
+      if buffer.strip():
+        participants.append([buffer.strip()])
+      buffer = ""
+    else:
+      buffer += char
+  if buffer.strip():
+    participants.append([buffer.strip()])
+  return participants
+
+# ----------------
+# CLI COMMANDS
+# ----------------
+
+def add_player(names):
+  for name in names.split(','):
+    name = name.strip()
+    if not name:
+      continue
+    if any(p.name.lower() == name.lower() for p in players):
+      print(f"Player '{name}' already exists.")
+    else:
+      new_id = max((p.id for p in players), default=0) + 1
+      players.append(Player(new_id, name, mu=25.0, sigma=8.333))
+      print(f"Player '{name}' added.")
   save()
-  print(f"Player '{name}' added.")
+
+def list_players():
+  sorted_players = sorted(players, key=lambda p: -p.mu)
+  if not sorted_players:
+    print("No players found.")
+    return
+
+  num_players = len(sorted_players)
+  pad_width = len(str(num_players))
+  longest_name = max(len(p.name) for p in sorted_players)
+
+  for idx, p in enumerate(sorted_players, start=1):
+    rank_str = f"({str(idx).rjust(pad_width)})"
+    name_str = p.name.ljust(longest_name)
+    print(f"{rank_str} {name_str} - μ={p.mu:.2f}, σ={p.sigma:.2f}")
 
 def delete_player(name):
   global players
-  players = [p for p in players if p.name != name]
+  players = [p for p in players if p.name.lower() != name.lower()]
   save()
   print(f"Deleted player '{name}'.")
 
@@ -40,30 +112,43 @@ def show_rankings():
   for p in sorted(players, key=lambda p: -p.mu):
     print(f"{p.name}: μ={p.mu:.2f}, σ={p.sigma:.2f}")
 
-def add_match(input_str):
+def add_match(input_str, datetime_override=None):
   try:
     parsed = parse_participants(input_str)
     resolved = []
     for team in parsed:
-      players_in_team = [next(p for p in players if p.name == name) for name in team]
+      players_in_team = []
+      for name in team:
+        player = find_player(name)
+        if not player:
+          raise ValueError(f"Player '{name}' does not exist.")
+        players_in_team.append(player)
       resolved.append(players_in_team)
 
-    # Update ratings
     update_ratings(*resolved)
 
-    # Record match
     match_id = max((m.id for m in matches), default=0) + 1
     match = Match(id=match_id)
+
     for place, team_players in enumerate(resolved, start=1):
       team_id = max((t.id for t in teams), default=0) + 1
       team = Team(id=team_id, players=team_players)
       teams.append(team)
       match.match_teams.append({'team': team, 'place': place, 'score': None})
-    match.played_at = datetime.now().isoformat(timespec='minutes')
-    matches.append(match)
 
+    if datetime_override:
+      try:
+        datetime.fromisoformat(datetime_override)
+        match.datetime = datetime_override
+      except ValueError:
+        print("Invalid datetime format. Using current time instead.")
+        match.datetime = datetime.now().isoformat(timespec='minutes')
+    else:
+      match.datetime = datetime.now().isoformat(timespec='minutes')
+
+    matches.append(match)
     save()
-    print(f"Match recorded at {match.played_at}")
+    print(f"Match recorded at {match.datetime}")
   except Exception as e:
     print(f"Error adding match: {e}")
 
@@ -89,104 +174,99 @@ def list_matches():
           for entry in match.match_teams:
             names = ", ".join(p.name for p in entry['team'].players)
             team_descriptions.append(f"[{names}]")
-          print(f"      {match.datetime} → {' > '.join(team_descriptions)}")
+          time_only = datetime.fromisoformat(match.datetime).strftime("%H:%M")
+          print(f"      {time_only} : {match.id} -> {' > '.join(team_descriptions)}")
 
-def edit_match(datetime_str):
+def edit_match(match_id_str):
   try:
-    match = next(m for m in matches if m.datetime.startswith(datetime_str))
-  except StopIteration:
-    print(f"No match found with timestamp {datetime_str}")
+    match_id = int(match_id_str)
+    match = next(m for m in matches if m.id == match_id)
+  except (ValueError, StopIteration):
+    print(f"No match found with ID {match_id_str}")
     return
 
-  print(f"Editing match from {match.datetime}")
+  print(f"Editing match {match.id} ({match.datetime})")
   for i, entry in enumerate(match.match_teams, start=1):
     names = ", ".join(p.name for p in entry['team'].players)
     print(f"  {i}. {names}")
 
-  new_input = input("Enter new participants (comma-separated, use brackets for teams): ")
+  player_names = [p.name for p in players]
+  player_completer = WordCompleter(player_names, ignore_case=True)
+
+  new_input = prompt(
+    "Enter new participants (comma-separated, use brackets for teams) or leave blank to keep: ",
+    completer=player_completer
+  )
+  if new_input.strip():
+    try:
+      entries = ast.literal_eval(f"[{new_input}]")
+      resolved = []
+      for entry in entries:
+        if isinstance(entry, list):
+          team = [find_player(name) for name in entry]
+        else:
+          team = [find_player(entry)]
+        if None in team:
+          raise ValueError("One or more player names not found.")
+        resolved.append(team)
+
+      old_structure = [
+        sorted(p.name for p in entry['team'].players)
+        for entry in match.match_teams
+      ]
+      new_structure = [
+        sorted(p.name for p in team_players)
+        for team_players in resolved
+      ]
+
+      if old_structure != new_structure:
+        new_match_teams = []
+        for place, team_players in enumerate(resolved, start=1):
+          team_id = max((t.id for t in teams), default=0) + 1
+          team = Team(id=team_id, players=team_players)
+          teams.append(team)
+          new_match_teams.append({'team': team, 'place': place, 'score': None})
+        match.match_teams = new_match_teams
+
+    except Exception as e:
+      print(f"Failed to edit teams: {e}")
+      return
+
+  new_dt = input(f"Enter new datetime (YYYY-MM-DDTHH:MM) [default: {match.datetime}]: ").strip()
+  if new_dt:
+    try:
+      datetime.fromisoformat(new_dt)
+      match.datetime = new_dt
+    except ValueError:
+      print("Invalid datetime format. Keeping existing time.")
+
+  recalculate_ratings_from(match.datetime, players, matches)
+  save()
+  print("Match updated.")
+
+def delete_match(match_id_str):
   try:
-    entries = ast.literal_eval(f"[{new_input}]")
-    resolved = []
-    for entry in entries:
-      if isinstance(entry, list):
-        team = [next(p for p in players if p.name == name) for name in entry]
-      else:
-        team = [next(p for p in players if p.name == entry)]
-      resolved.append(team)
-
-    # Replace teams and match teams
-    new_match_teams = []
-    for place, team_players in enumerate(resolved, start=1):
-      team_id = max((t.id for t in teams), default=0) + 1
-      team = Team(id=team_id, players=team_players)
-      teams.append(team)
-      new_match_teams.append({'team': team, 'place': place, 'score': None})
-    match.match_teams = new_match_teams
-
+    match_id = int(match_id_str)
+    match = next(m for m in matches if m.id == match_id)
+    matches.remove(match)
     recalculate_ratings_from(match.datetime, players, matches)
     save()
-    print("Match updated.")
+    print(f"Match {match_id} deleted.")
+  except (ValueError, StopIteration):
+    print(f"No match found with ID {match_id_str}")
 
-    # Reset all player ratings
-    for player in players:
-      player.trueskill = Rating()
+def undo():
+  global players, teams, matches, previous_state
+  if previous_state is None:
+    print("No operation to undo.")
+    return
+  players, teams, matches = copy.deepcopy(previous_state)
+  save_db(players, teams, matches)
+  print("Last operation undone.")
 
-    # Re-apply every match in order
-    for match in sorted(matches, key=lambda m: m.datetime):
-      recalculate_ratings_from(match.datetime, players, matches)
-  except Exception as e:
-    print(f"Failed to edit match: {e}")
-
-def parse_participants(input_str):
-  """
-  Parse input like 'Ham,bobthecop11,[SabbaticGoat,gingikinz]'
-  into [['Ham'], ['bobthecop11'], ['SabbaticGoat', 'gingikinz']]
-  """
-  participants = []
-  buffer = ""
-  inside_team = False
-
-  for char in input_str:
-    if char == '[':
-      inside_team = True
-      buffer = ""
-    elif char == ']':
-      inside_team = False
-      team = [name.strip() for name in buffer.split(',') if name.strip()]
-      participants.append(team)
-      buffer = ""
-    elif char == ',' and not inside_team:
-      if buffer.strip():
-        participants.append([buffer.strip()])
-      buffer = ""
-    else:
-      buffer += char
-
-  if buffer.strip():
-    participants.append([buffer.strip()])
-
-  return participants
-
-def main():
+def run_cli(args):
   init_db()
   load()
-  parser = argparse.ArgumentParser(description="TrueSkill League CLI")
-  sub = parser.add_subparsers(dest='cmd')
-
-  # players
-  p = sub.add_parser('players')
-  p.add_argument('action', choices=['list', 'add', 'delete'], nargs='?', default='list')
-  p.add_argument('name', nargs='?')
-
-  # rankings
-  sub.add_parser('rankings')
-
-  # matches
-  m = sub.add_parser('matches')
-  m.add_argument('action', choices=['add', 'list', 'edit'], nargs='?', default='list')
-  m.add_argument('arg', nargs='?')
-
-  args = parser.parse_args()
 
   if args.cmd == 'players':
     if args.action == 'list':
@@ -201,14 +281,13 @@ def main():
 
   elif args.cmd == 'matches':
     if args.action == 'add' and args.arg:
-      add_match(args.arg)
+      add_match(args.arg, args.time)
     elif args.action == 'list':
       list_matches()
     elif args.action == 'edit' and args.arg:
       edit_match(args.arg)
+    elif args.action == 'delete' and args.arg:
+      delete_match(args.arg)
 
-  else:
-    parser.print_help()
-
-if __name__ == '__main__':
-  main()
+  elif args.cmd == 'undo':
+    undo()

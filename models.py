@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime as dt
 from ratings import update_ratings
 from trueskill import Rating
 
@@ -19,9 +19,9 @@ class Team:
     self.players = players or []
 
 class Match:
-  def __init__(self, id, match_teams=None, datetime=datetime.now().isoformat(timespec='minutes')):
+  def __init__(self, id, match_teams=None, datetime=dt.now().isoformat(timespec='minutes')):
     self.id = id
-    self.datetime = datetime or datetime.now().isoformat(timespec='minutes')
+    self.datetime = datetime or dt.now().isoformat(timespec='minutes')
     self.match_teams = match_teams or []
 
   def apply_results(self):
@@ -40,21 +40,21 @@ def recalculate_all_ratings(players, matches):
     match.apply_results()
 
 def recalculate_ratings_from(match_point, players, matches):
-  # Step 1: Identify all affected players
-  affected_player_ids = {
-    player.id
-    for match in matches
-    if match.played_at >= match_point
-    for entry in match.match_teams
-    for player in entry['team'].players
-  }
+  # Step 1: Collect matches at or after match_point
+  matches_to_recalc = [m for m in matches if m.datetime >= match_point]
 
-  # Step 2: Reset only affected players
+  # Step 2: Identify affected player ids
+  affected_player_ids = set()
+  for match in matches_to_recalc:
+    for entry in match.match_teams:
+      for player in entry['team'].players:
+        affected_player_ids.add(player.id)
+
+  # Step 3: Reset affected players only
   for player in players:
     if player.id in affected_player_ids:
       player.trueskill = Rating()
 
-  # Step 3: Reapply results for affected matches only
-  for match in sorted(matches, key=lambda m: m.played_at):
-    if match.played_at >= match_point:
-      match.apply_results()
+  # Step 4: Reapply results for affected matches only
+  for match in sorted(matches_to_recalc, key=lambda m: m.datetime):
+    match.apply_results()

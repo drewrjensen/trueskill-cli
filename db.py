@@ -1,21 +1,27 @@
-import os, sqlite3, sys
-from models import Player, Team, Match
+import os, shutil, sqlite3, sys
+from models import Match, Player, Team
+
+DB_PATH = 'league.db'
+
+def set_db_path(path):
+  global DB_PATH
+  DB_PATH = path
 
 def resource_path(filename):
   base = getattr(sys, '_MEIPASS', os.path.abspath("."))
   return os.path.join(base, filename)
 
 def init_db():
-  if not os.path.exists('league.db'):
+  if not os.path.exists(DB_PATH):
     with open(resource_path('schemas.sql')) as f:
       sql = f.read()
-    conn = sqlite3.connect('league.db')
+    conn = sqlite3.connect(DB_PATH)
     conn.executescript(sql)
     conn.commit()
     conn.close()
 
 def load_db():
-  conn = sqlite3.connect('league.db')
+  conn = sqlite3.connect(DB_PATH)
   c = conn.cursor()
 
   c.execute("SELECT id, name, mu, sigma FROM players")
@@ -43,7 +49,11 @@ def load_db():
   return players, teams, matches
 
 def save_db(players, teams, matches):
-  conn = sqlite3.connect('league.db')
+  # Backup first
+  if os.path.exists(DB_PATH):
+    shutil.copy(DB_PATH, 'league_backup.db')
+
+  conn = sqlite3.connect(DB_PATH)
   c = conn.cursor()
 
   c.execute("DELETE FROM players")
@@ -53,7 +63,7 @@ def save_db(players, teams, matches):
 
   c.execute("DELETE FROM teams")
   for t in teams:
-    c.execute("INSERT INTO teams (id) VALUES (?)", (t.id))
+    c.execute("INSERT INTO teams (id) VALUES (?)", (t.id,))
 
   c.execute("DELETE FROM team_players")
   for t in teams:
@@ -62,7 +72,7 @@ def save_db(players, teams, matches):
 
   c.execute("DELETE FROM matches")
   for m in matches:
-    c.execute("INSERT INTO matches (id) VALUES (?, ?)", (m.id, m.datetime))
+    c.execute("INSERT INTO matches (id, datetime) VALUES (?, ?)", (m.id, m.datetime))
 
   c.execute("DELETE FROM match_teams")
   for m in matches:
