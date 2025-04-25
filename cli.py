@@ -2,7 +2,7 @@ import argparse
 import ast
 from collections import defaultdict
 from datetime import datetime
-from db import load_db, save_db
+from db import init_db, load_db, save_db
 from models import Match, Player, Team, recalculate_ratings_from
 from ratings import update_ratings
 import sys
@@ -140,6 +140,7 @@ def edit_match(datetime_str):
     print(f"Failed to edit match: {e}")
 
 def main():
+  init_db()
   load()
   parser = argparse.ArgumentParser(description="TrueSkill League CLI")
   sub = parser.add_subparsers(dest='cmd')
