@@ -6,9 +6,6 @@ from datetime import datetime
 from prompt_toolkit import prompt
 from prompt_toolkit.completion import WordCompleter
 from rapidfuzz import process
-from db import init_db, load_db, save_db
-from models import Match, Player, Team, recalculate_ratings_from
-from ratings import update_ratings
 
 players, teams, matches = [], [], []
 previous_state = None  # Snapshot for undo
