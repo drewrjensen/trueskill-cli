@@ -21,6 +21,7 @@ class Team:
 class Match:
   def __init__(self, id, match_teams=None, datetime=datetime.now().isoformat(timespec='minutes')):
     self.id = id
+    self.datetime = datetime or datetime.now().isoformat(timespec='minutes')
     self.match_teams = match_teams or []
 
   def apply_results(self):

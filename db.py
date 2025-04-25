@@ -31,7 +31,7 @@ def load_db():
     team.players.append(player)
 
   c.execute("SELECT id, datetime FROM matches")
-  matches = [Match(row[0]) for row in c.fetchall()]
+  matches = [Match(id=row[0], datetime=row[1]) for row in c.fetchall()]
 
   c.execute("SELECT match_id, team_id, place, score FROM match_teams")
   for match_id, team_id, place, score in c.fetchall():
