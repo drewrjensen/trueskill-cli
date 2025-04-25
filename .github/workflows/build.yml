@@ -38,7 +38,7 @@ jobs:
 
       - name: Build executable
         run: |
-          pyinstaller --onefile --add-data "setup-db.sql:." cli.py
+          pyinstaller --onefile --add-data "schemas.sql:." cli.py
 
       - name: Rename output
         run: |
