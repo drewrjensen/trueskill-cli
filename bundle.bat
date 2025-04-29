@@ -1,1 +1,1 @@
-pyinstaller --onefile --add-data "schemas.sql;." main.py
+pyinstaller --onefile --add-data "schemas.sql;." src\main.py

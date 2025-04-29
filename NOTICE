@@ -1,0 +1,13 @@
+NOTICE
+
+This software is distributed under the GNU General Public License, version 3 (GPLv3).
+See the LICENSE file in the root of this repository for full license terms.
+
+Third-party components and licenses:
+
+- The `trueskill` Python package, developed by Heungsub Lee, is included under the MIT License.
+  See LICENSES/trueskill.txt for the full license text.
+
+Source code for this project resides in the `src/` directory.
+
+No warranties are provided, express or implied. Use at your own risk.
