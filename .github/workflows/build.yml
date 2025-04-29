@@ -39,7 +39,7 @@ jobs:
       - name: Build executable
         run: |
           if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-            pyinstaller --onefile --add-data "schemas.sql;." src\main.py --name trueskill-cli
+            pyinstaller --onefile --add-data "schemas.sql;." src/main.py --name trueskill-cli
           else
             pyinstaller --onefile --add-data "schemas.sql:." src/main.py --name trueskill-cli
           fi
