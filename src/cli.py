@@ -17,11 +17,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import ast
-import copy
+import ast, copy
 from collections import defaultdict
 from datetime import datetime
-from db import init_db, load_db, save_db
+from db import init_db, load_db, save_db, export_db, import_db
 from models import Match, Player, Team
 from ratings import update_ratings, recalculate_ratings_from
 from prompt_toolkit import prompt
@@ -309,3 +308,12 @@ def run_cli(args):
 
   elif args.cmd == 'undo':
     undo()
+
+  elif args.cmd == 'export':
+    json_path = args.db_path.rsplit('.', 1)[0] + '.json'
+    export_db(json_path)
+
+  elif args.cmd == 'import':
+    json_path = args.db_path.rsplit('.', 1)[0] + '.json'
+    import_db(json_path)
+    save()
