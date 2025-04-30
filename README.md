@@ -1,4 +1,5 @@
 # TrueSkill CLI
+[![Build Status](https://github.com/drewrjensen/trueskill-cli/actions/workflows/build.yml/badge.svg)](https://github.com/drewrjensen/trueskill-cli/actions)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 A cross-platform command-line application to manage players, matches, and rankings for competitive leagues using Microsoft's [TrueSkill](https://www.microsoft.com/en-us/research/project/trueskill-ranking-system/) system.
