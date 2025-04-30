@@ -21,6 +21,7 @@ import json, os, shutil, sqlite3, sys
 from models import Match, Player, Team
 
 DB_PATH = 'league.db'
+players, teams, matches = [], [], []
 
 def set_db_path(path):
   global DB_PATH
@@ -40,6 +41,7 @@ def init_db():
     conn.close()
 
 def load_db():
+  global players, teams, matches
   conn = sqlite3.connect(DB_PATH)
   c = conn.cursor()
 
@@ -65,10 +67,9 @@ def load_db():
     match.match_teams.append({'team': team, 'place': place, 'score': score})
 
   conn.close()
-  return players, teams, matches
 
-def save_db(players, teams, matches):
-  # Backup first
+def save_db():
+  global players, teams, matches
   if os.path.exists(DB_PATH):
     shutil.copy(DB_PATH, 'league_backup.db')
 
@@ -77,8 +78,7 @@ def save_db(players, teams, matches):
 
   c.execute("DELETE FROM players")
   for p in players:
-    c.execute("INSERT INTO players (id, name, mu, sigma) VALUES (?, ?, ?, ?)",
-              (p.id, p.name, p.mu, p.sigma))
+    c.execute("INSERT INTO players (id, name, mu, sigma) VALUES (?, ?, ?, ?)", (p.id, p.name, p.mu, p.sigma))
 
   c.execute("DELETE FROM teams")
   for t in teams:

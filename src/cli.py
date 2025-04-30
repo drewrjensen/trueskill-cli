@@ -20,7 +20,7 @@
 import ast, copy
 from collections import defaultdict
 from datetime import datetime
-from db import init_db, load_db, save_db, export_db, import_db
+from db import players, teams, matches, init_db, load_db, save_db, export_db, import_db
 from models import Match, Player, Team
 from ratings import update_ratings, recalculate_ratings_from
 from prompt_toolkit import prompt
@@ -32,7 +32,7 @@ previous_state = None  # Snapshot for undo
 
 def load():
   global players, teams, matches
-  players, teams, matches = load_db()
+  load_db()
 
 def save():
   global previous_state
@@ -41,7 +41,7 @@ def save():
     copy.deepcopy(teams),
     copy.deepcopy(matches),
   )
-  save_db(players, teams, matches)
+  save_db()
 
 # ----------------
 # Helpers

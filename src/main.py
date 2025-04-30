@@ -21,7 +21,7 @@ import argparse
 from cli import run_cli
 from db import init_db, set_db_path
 
-VERSION = "v1.0.10"
+VERSION = "v1.1.0"
 
 def main():
   parser = argparse.ArgumentParser(description="TrueSkill League CLI")
@@ -45,6 +45,10 @@ def main():
 
   # undo
   sub.add_parser('undo', help='Undo last operation')
+
+  # import/export
+  sub.add_parser('export', help='Export database to JSON')
+  sub.add_parser('import', help='Import database from JSON')
 
   args = parser.parse_args()
 
