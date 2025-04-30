@@ -67,8 +67,8 @@ def load_db():
     match.match_teams.append({'team': team, 'place': place, 'score': score})
 
   conn.close()
-  print(f"Loaded {len(players)} players, {len(teams)} teams, and {len(matches)} matches from the database.")
-  print(f"Database loaded from {DB_PATH}")
+  # print(f"Loaded {len(players)} players, {len(teams)} teams, and {len(matches)} matches from the database.")
+  # print(f"Database loaded from {DB_PATH}")
 
 def save_db():
   global players, teams, matches
