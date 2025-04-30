@@ -20,7 +20,7 @@
 import ast, copy
 from collections import defaultdict
 from datetime import datetime
-from db import players, teams, matches, init_db, load_db, save_db, export_db, import_db
+from db import players, teams, matches, load_db, save_db, export_db, import_db
 from models import Match, Player, Team
 from ratings import update_ratings, recalculate_ratings_from
 from prompt_toolkit import prompt
@@ -281,9 +281,6 @@ def undo():
   print("Last operation undone.")
 
 def run_cli(args):
-  init_db()
-  load()
-
   if args.cmd == 'players':
     if args.action == 'list':
       list_players()
