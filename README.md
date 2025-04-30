@@ -157,7 +157,7 @@ GPL © [Drew Jensen](https://github.com/drewrjensen)
 This project includes:
 
 - `trueskill` by Heungsub Lee, licensed under the MIT License.  
-  See [`LICENSES_trueskill.txt`](./LICENSES_trueskill.txt) for details.
+  See [`LICENSES_trueskill.txt`](LICENSES/trueskill.txt) for details.
 
 ---
 
