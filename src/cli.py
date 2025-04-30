@@ -27,7 +27,6 @@ from prompt_toolkit import prompt
 from prompt_toolkit.completion import WordCompleter
 from rapidfuzz import process
 
-players, teams, matches = [], [], []
 previous_state = None  # Snapshot for undo
 
 def load():

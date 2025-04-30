@@ -21,7 +21,7 @@ import argparse
 from cli import run_cli
 from db import init_db, load_db, set_db_path
 
-VERSION = "v1.1.1"
+VERSION = "v1.1.2"
 
 def main():
   parser = argparse.ArgumentParser(description="TrueSkill League CLI")
@@ -55,13 +55,11 @@ def main():
   set_db_path(args.db_path)
 
   if args.cmd is None:
-    init_db()
-    load_db()
     parser.print_help()
   else:
-    init_db()
-    load_db()
     run_cli(args)
 
 if __name__ == "__main__":
+  init_db()
+  load_db()
   main()
