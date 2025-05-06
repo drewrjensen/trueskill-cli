@@ -20,7 +20,8 @@
 import ast, copy
 from collections import defaultdict
 from datetime import datetime
-from db import players, teams, matches, load_db, save_db, export_db, import_db
+import db
+from db import load_db, save_db, export_db, import_db
 from models import Match, Player, Team
 from ratings import update_ratings, recalculate_ratings_from
 from prompt_toolkit import prompt
@@ -32,9 +33,9 @@ previous_state = None  # Snapshot for undo
 def save():
   global previous_state
   previous_state = (
-    copy.deepcopy(players),
-    copy.deepcopy(teams),
-    copy.deepcopy(matches),
+    copy.deepcopy(db.players),
+    copy.deepcopy(db.teams),
+    copy.deepcopy(db.matches),
   )
   save_db()
 
@@ -44,15 +45,15 @@ def save():
 
 def find_player(name):
   lowered = name.lower()
-  for p in players:
+  for p in db.players:
     if p.name.lower() == lowered:
       return p
-  player_names = [p.name for p in players]
+  player_names = [p.name for p in db.players]
   matches_found = process.extract(name, player_names, limit=1, score_cutoff=80)
   if matches_found:
     suggestion, _, _ = matches_found[0]
     print(f"No exact match for '{name}'. Did you mean '{suggestion}'?")
-    return next(p for p in players if p.name == suggestion)
+    return next(p for p in db.players if p.name == suggestion)
   return None
 
 def parse_participants(input_str):
@@ -99,16 +100,18 @@ def add_player(names):
     name = name.strip()
     if not name:
       continue
-    if any(p.name.lower() == name.lower() for p in players):
+    if any(p.name.lower() == name.lower() for p in db.players):
       print(f"Player '{name}' already exists.")
     else:
-      new_id = max((p.id for p in players), default=0) + 1
-      players.append(Player(new_id, name, mu=25.0, sigma=8.333))
+      new_id = max((p.id for p in db.players), default=0) + 1
+      db.players.append(Player(new_id, name, mu=25.0, sigma=8.333))
       print(f"Player '{name}' added.")
   save()
 
 def list_players():
-  sorted_players = sorted(players, key=lambda p: -p.mu)
+  print("len(players):", len(db.players))
+  sorted_players = sorted(db.players, key=lambda p: -p.mu)
+  print("len(sorted_players):", len(sorted_players))
   if not sorted_players:
     print("No players found.")
     return
@@ -119,16 +122,16 @@ def list_players():
 
 def delete_player(name):
   name = name.strip().lower()
-  index = next((i for i, p in enumerate(players) if p.name.lower() == name), None)
+  index = next((i for i, p in enumerate(db.players) if p.name.lower() == name), None)
   if index is not None:
-    del players[index]
+    del db.players[index]
     save()
     print(f"Deleted player '{name}'.")
   else:
     print(f"Player '{name}' not found.")
 
 def show_rankings():
-  for p in sorted(players, key=lambda p: -p.mu):
+  for p in sorted(db.players, key=lambda p: -p.mu):
     print(f"{p.name}: μ={p.mu:.2f}, σ={p.sigma:.2f}")
 
 def add_match(input_str, datetime_override=None):
@@ -146,13 +149,13 @@ def add_match(input_str, datetime_override=None):
 
     update_ratings(*resolved)
 
-    match_id = max((m.id for m in matches), default=0) + 1
+    match_id = max((m.id for m in db.matches), default=0) + 1
     match = Match(id=match_id)
 
     for place, team_players in enumerate(resolved, start=1):
-      team_id = max((t.id for t in teams), default=0) + 1
+      team_id = max((t.id for t in db.teams), default=0) + 1
       team = Team(id=team_id, players=team_players)
-      teams.append(team)
+      db.teams.append(team)
       score = scores[place - 1] if len(scores) >= place else None
       match.match_teams.append({'team': team, 'place': place, 'score': score})
 
@@ -161,18 +164,18 @@ def add_match(input_str, datetime_override=None):
       else datetime.now().isoformat(timespec='minutes')
     )
 
-    matches.append(match)
+    db.matches.append(match)
     save()
     print(f"Match recorded at {match.datetime}")
   except Exception as e:
     print(f"Error adding match: {e}")
 
 def list_matches():
-  if not matches:
+  if not db.matches:
     print("No matches recorded.")
     return
   grouped = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
-  for match in matches:
+  for match in db.matches:
     dt = datetime.fromisoformat(match.datetime)
     grouped[dt.year][dt.month][dt.day].append(match)
   for year in sorted(grouped):
@@ -194,14 +197,14 @@ def undo():
   if previous_state is None:
     print("No operation to undo.")
     return
-  players[:], teams[:], matches[:] = copy.deepcopy(previous_state)
+  db.players[:], db.teams[:], db.matches[:] = copy.deepcopy(previous_state)
   save_db()
   print("Last operation undone.")
 
 def edit_match(match_id_str):
   try:
     match_id = int(match_id_str)
-    match = next(m for m in matches if m.id == match_id)
+    match = next(m for m in db.matches if m.id == match_id)
   except (ValueError, StopIteration):
     print(f"No match found with ID {match_id_str}")
     return
@@ -212,7 +215,7 @@ def edit_match(match_id_str):
     score_str = f" (score: {entry['score']})" if entry['score'] is not None else ""
     print(f"  {i}. {names}{score_str}")
 
-  player_names = [p.name for p in players]
+  player_names = [p.name for p in db.players]
   player_completer = WordCompleter(player_names, ignore_case=True)
 
   try:
@@ -232,9 +235,9 @@ def edit_match(match_id_str):
       if resolved:
         match.match_teams = []
         for place, team_players in enumerate(resolved, start=1):
-          team_id = max((t.id for t in teams), default=0) + 1
+          team_id = max((t.id for t in db.teams), default=0) + 1
           team = Team(id=team_id, players=team_players)
-          teams.append(team)
+          db.teams.append(team)
           score = scores[place - 1] if len(scores) >= place else None
           match.match_teams.append({'team': team, 'place': place, 'score': score})
 
@@ -246,7 +249,7 @@ def edit_match(match_id_str):
       except ValueError:
         print("Invalid datetime format. Keeping existing time.")
 
-    recalculate_ratings_from(match.datetime, players, matches)
+    recalculate_ratings_from(match.datetime, db.players, db.matches)
     save()
     print("Match updated.")
   except Exception as e:
