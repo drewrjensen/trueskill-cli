@@ -17,13 +17,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import ast, copy
+import copy
 from collections import defaultdict
 from datetime import datetime
 import db
-from db import load_db, save_db, export_db, import_db
+from db import export_db, import_db, load_db, save_db
 from models import Match, Player, Team
-from ratings import update_ratings, recalculate_ratings_from
+from ratings import recalculate_ratings_from, update_ratings
 from prompt_toolkit import prompt
 from prompt_toolkit.completion import WordCompleter
 from rapidfuzz import process
