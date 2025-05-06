@@ -109,9 +109,9 @@ def add_player(names):
   save()
 
 def list_players():
-  print("len(players):", len(db.players))
+  # print("len(players):", len(db.players))
   sorted_players = sorted(db.players, key=lambda p: -p.mu)
-  print("len(sorted_players):", len(sorted_players))
+  # print("len(sorted_players):", len(sorted_players))
   if not sorted_players:
     print("No players found.")
     return
