@@ -286,6 +286,6 @@ def run_cli(args):
 
   elif args.cmd == 'import':
     json_path = args.db_path.rsplit('.', 1)[0] + '.json'
-    print(f"Importing from {json_path}")
+    # print(f"Importing from {json_path}")
     import_db(json_path)
     save()
