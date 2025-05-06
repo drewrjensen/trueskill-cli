@@ -1,5 +1,6 @@
-# Generated DB file
+# Generated DB files
 *.db
+league.json
 
 # Python bytecode
 __pycache__/
