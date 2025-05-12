@@ -1,0 +1,22 @@
+# Exclude unnecessary files and directories
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+.env
+*.sqlite3
+*.db
+.DS_Store
+*.log
+*.bak
+*.swp
+.idea/
+.vscode/
+*.bat
+*.sh
+LICENSES/
+README.md
+!schemas.sql
+# Allow clean.sh to be included in the Docker build context
+!clean.sh
