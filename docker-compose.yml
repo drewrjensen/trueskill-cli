@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  trueskill:
+    image: trueskill-cli
+    build:
+      context: .
+      dockerfile: Dockerfile
+    working_dir: /app
+    volumes:
+      - ./data:/app
+    entrypoint: /usr/local/bin/trueskill-cli

@@ -1,41 +1,21 @@
-# Use an official Python runtime as a parent image
-FROM python:3.9-slim
-
-# Set the working directory in the container
+# ----- Stage 1: Build -----
+FROM python:3-alpine AS builder
 WORKDIR /app
 
-# Copy the Pipfile and Pipfile.lock to the container
-COPY Pipfile Pipfile.lock /app/
-
-# Install dependencies
+COPY Pipfile Pipfile.lock ./
 RUN pip install pipenv && pipenv install --system --deploy
+RUN pip install pyinstaller && apk add --no-cache binutils
 
-# Install PyInstaller for building the app into a Linux executable
-RUN pip install pyinstaller
-
-# Install binutils to provide objdump, required by PyInstaller on Linux
-RUN apt-get update && apt-get install -y binutils && rm -rf /var/lib/apt/lists/*
-
-# Copy the rest of the application code to the container
-COPY . /app
-
-# Explicitly copy schemas.sql to the /app directory
-COPY schemas.sql /app/
-
-# Explicitly copy clean.sh to the /app directory
-COPY clean.sh /app/
-
-# Build the application into a Linux executable
+COPY . .
+RUN rm -rf build __pycache__ venv *.spec
 RUN pyinstaller --onefile --add-data "schemas.sql:." src/main.py
 
-# Move the built executable to the root directory and rename it to 'main'
-RUN mv dist/main /app/main
+# ----- Stage 2: Runtime -----
+FROM alpine:latest
+WORKDIR /app
 
-# Run the clean.sh script to clean up build artifacts
-RUN chmod +x clean.sh && ./clean.sh
+# Only copy the built binary
+COPY --from=builder /app/dist/main /usr/local/bin/trueskill-cli
+RUN chmod +x /usr/local/bin/trueskill-cli
 
-# Expose the port the app runs on (if applicable)
-EXPOSE 8000
-
-# Define the command to run the application
-CMD ["python", "src/main.py"]
+# No default CMD; container acts as on-demand CLI tool
