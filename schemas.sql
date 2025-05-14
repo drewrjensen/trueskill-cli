@@ -1,8 +1,17 @@
 create table players (
   id integer primary key autoincrement,
-  name text not null,
+  name text not null unique,
   mu real not null default 25.0,
   sigma real not null default 8.3333333
+);
+
+create table player_days (
+  id integer primary key autoincrement,
+  player_id integer not null references players(id) on delete cascade,
+  date text default (date('now')),
+  mu real not null,
+  sigma real not null,
+  unique (player_id, date)
 );
 
 create table teams (
@@ -12,7 +21,8 @@ create table teams (
 create table team_players (
   id integer primary key autoincrement,
   team_id integer not null references teams(id) on delete cascade,
-  player_id integer not null references players(id) on delete cascade
+  player_id integer not null references players(id) on delete cascade,
+  unique (team_id, player_id)
 );
 
 create table matches (

@@ -1,49 +1,68 @@
-# Generated DB files
+# --------------------
+# 🔨 Build artifacts (PyInstaller, dist, CLI output)
+# --------------------
+*.exe
+*.spec
+build/
+dist/
+output/
+trueskill-cli
+
+# --------------------
+# 🧹 Bytecode / Python cache
+# --------------------
+*.py[cod]
+*$py.class
+__pycache__/
+
+# --------------------
+# 🗃️ Database and exported files
+# --------------------
 *.db
 league.json
 
-# Python bytecode
-__pycache__/
-*.py[cod]
-*$py.class
-
-# PyInstaller
-*.spec
-dist/
-build/
-output/
-
-# Executable CLI
-*.exe
-trueskill-cli
-
-# Virtual environments
-.venv/
-venv/
-env/
-ENV/
-
-# Pytest and coverage
-.pytest_cache/
-.coverage
-htmlcov/
+# --------------------
+# 🧠 Editor / system files
+# --------------------
 .cache
-.tox/
+.DS_Store
+.env
+.idea/
+.vscode/
 
-# Type checking
-.mypy_cache/
-.dmypy.json
-.pyre/
-.pytype/
+# --------------------
+# 📦 Local package cache (PEP 582, eggs)
+# --------------------
+*.egg-info/
+__pypackages__/
 
-# Linting tools
-.ruff_cache/
-
-# Logs and temp
+# --------------------
+# ⚠️ Temporary files and logs
+# --------------------
 *.log
 *.tmp
 
-# System/IDE files
-*.DS_Store
-.idea/
-.vscode/
+# --------------------
+# 🧪 Testing and coverage
+# --------------------
+.coverage
+.pytest_cache/
+htmlcov/
+.tox/
+
+# --------------------
+# 🧼 Type checking and linting
+# --------------------
+.dmypy.json
+.mypy_cache/
+.pyre/
+.pytype/
+.ruff_cache/
+
+# --------------------
+# ⚙️ Virtual environments
+# --------------------
+.venv/
+ENV/
+env/
+venv/

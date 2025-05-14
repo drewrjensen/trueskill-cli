@@ -22,9 +22,10 @@ Supports:
 - Date-aware match storage (`datetime` format)
 - Comma-separated, team-formatted input:  
   e.g. `John,Erin`, `[Erin,Samantha],[John,Roger]`
+- Optional team score input: `--scores 20,15`
 - Interactive editing with autocomplete and fuzzy-matching
 - Undo support for last operation
-- CLI flags for version, DB file override, and help
+- CLI flags for version, DB file override, date filtering, and help
 
 ---
 
@@ -37,7 +38,7 @@ git clone https://github.com/drewrjensen/trueskill-cli.git
 cd trueskill-cli
 chmod +x install-dependencies.sh
 ./install-dependencies.sh
-python main.py
+python src/main.py
 ```
 
 ### 🪟 From source (Windows)
@@ -46,7 +47,7 @@ python main.py
 git clone https://github.com/drewrjensen/trueskill-cli.git
 cd trueskill-cli
 install-dependencies.bat
-python main.py
+python src/main.py
 ```
 
 ### 📦 From releases
@@ -71,6 +72,7 @@ trueskill-cli players delete John
 
 ```bash
 trueskill-cli rankings
+trueskill-cli rankings --date 2025-05-10  # View historical snapshot
 ```
 
 ### 🏆 Matches
@@ -84,6 +86,9 @@ trueskill-cli matches add John,Erin --time 2025-05-01T15:00
 
 # Team match
 trueskill-cli matches add [John,Samantha],[Erin,Rodger]
+
+# Match with scores
+trueskill-cli matches add [Alice,Bob],[Eve,Mallory] --scores 20,15
 
 # Edit or delete
 trueskill-cli matches edit 5
@@ -130,10 +135,12 @@ clean.bat
 ### Rebuild executable
 
 ```bash
-pyinstaller --onefile --add-data "schemas.sql:." main.py --name trueskill-cli
-```
+# Linux/macOS
+pyinstaller --onefile --add-data "schemas.sql:." src/main.py --name trueskill-cli
 
-> Windows: use `;.` instead of `:.`
+# Windows
+pyinstaller --onefile --add-data "schemas.sql;." src/main.py --name trueskill-cli
+```
 
 ---
 
@@ -157,7 +164,7 @@ GPL © [Drew Jensen](https://github.com/drewrjensen)
 This project includes:
 
 - `trueskill` by Heungsub Lee, licensed under the MIT License.  
-  See [`LICENSES_trueskill.txt`](LICENSES/trueskill.txt) for details.
+  See [`trueskill.txt`](LICENSES/trueskill.txt) for details.
 
 ---
 

@@ -21,46 +21,98 @@ import argparse
 from cli import run_cli
 from db import init_db, set_db_path
 
-VERSION = "v1.3.1"
+VERSION = "v1.3.0"
+
 
 def main():
-  parser = argparse.ArgumentParser(description="TrueSkill League CLI")
-  parser.add_argument('--version', action='version', version=f'TrueSkill CLI {VERSION}')
-  parser.add_argument('--db-path', default='league.db', help='Path to database file (default: league.db)')
-  sub = parser.add_subparsers(dest='cmd')
+    parser = argparse.ArgumentParser(description="TrueSkill League CLI")
+    parser.add_argument(
+        "--version", action="version", version=f"TrueSkill CLI {VERSION}"
+    )
+    parser.add_argument(
+        "--db-path",
+        default="league.db",
+        help="Path to database file (default: league.db)",
+    )
+    sub = parser.add_subparsers(dest="cmd", help="Primary commands")
 
-  # players
-  players_parser = sub.add_parser('players', help='Manage players')
-  players_parser.add_argument('action', choices=['list', 'add', 'delete'], nargs='?', default='list', help='Action to perform')
-  players_parser.add_argument('name', nargs='?', help='Player name(s)')
+    # players
+    players_parser = sub.add_parser("players", help="Manage players")
+    players_parser.add_argument(
+        "action",
+        choices=["list", "add", "delete"],
+        nargs="?",
+        default="list",
+        help="Action to perform",
+    )
+    players_parser.add_argument("name", nargs="?", help="Player name(s)")
 
-  # rankings
-  sub.add_parser('rankings', help='Show player rankings')
+    # rankings
+    rankings_parser = sub.add_parser("rankings", help="Show current player rankings")
+    rankings_parser.add_argument(
+        "--date", help="Show rankings snapshot for specific date (YYYY-MM-DD)"
+    )
 
-  # matches
-  matches_parser = sub.add_parser('matches', help='Manage matches')
-  matches_parser.add_argument('action', choices=['add', 'list', 'edit', 'delete'], nargs='?', default='list', help='Action to perform')
-  matches_parser.add_argument('arg', nargs='?', help='Argument for action (participants for add, match_id for edit/delete)')
-  matches_parser.add_argument('--time', help='Optional ISO datetime (e.g., 2025-04-27T14:30) for matches add')
-  matches_parser.add_argument('--scores', help='Comma-separated numeric scores for each team (e.g. 20,15,10)')
+    # matches
+    matches_parser = sub.add_parser("matches", help="Manage matches")
+    matches_parser.add_argument(
+        "action",
+        choices=["add", "list", "edit", "delete"],
+        nargs="?",
+        default="list",
+        help="Action to perform",
+    )
+    matches_parser.add_argument(
+        "arg",
+        nargs="?",
+        help="Argument for action (participants for add, match_id for edit/delete)",
+    )
+    matches_parser.add_argument(
+        "--time", help="Optional ISO datetime (e.g., 2025-04-27T14:30) for matches add"
+    )
+    matches_parser.add_argument(
+        "--scores", help="Comma-separated numeric scores for each team (e.g. 20,15,10)"
+    )
 
-  # undo
-  sub.add_parser('undo', help='Undo last operation')
+    # undo
+    sub.add_parser("undo", help="Undo last operation")
 
-  # import/export
-  sub.add_parser('export', help='Export database to JSON')
-  sub.add_parser('import', help='Import database from JSON')
+    # import/export
+    import_parser = sub.add_parser(
+        "import", help="Import database from JSON (regenerates player_days if missing)"
+    )
+    import_parser.add_argument(
+        "path",
+        nargs="?",
+        default="league.json",
+        help="Path to JSON file (default: league.json)",
+    )
 
-  args = parser.parse_args()
+    export_parser = sub.add_parser(
+        "export", help="Export database to JSON (includes player_days if available)"
+    )
+    export_parser.add_argument(
+        "path",
+        nargs="?",
+        default="league.json",
+        help="Path to export JSON file (default: league.json)",
+    )
 
-  set_db_path(args.db_path)
-  print(f"Using database at: {args.db_path}")
-  init_db()
+    # rebuild snapshots
+    sub.add_parser(
+        "rebuild-snapshots", help="Regenerate player_days for all unique match dates"
+    )
 
-  if args.cmd is None:
-    parser.print_help()
-  else:
-    run_cli(args)
+    args = parser.parse_args()
+
+    set_db_path(args.db_path)
+    init_db()
+
+    if args.cmd is None:
+        parser.print_help()
+    else:
+        run_cli(args)
+
 
 if __name__ == "__main__":
-  main()
+    main()

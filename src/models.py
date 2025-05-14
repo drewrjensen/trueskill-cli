@@ -21,29 +21,37 @@ from datetime import datetime as dt
 from ratings import update_ratings
 from trueskill import Rating
 
-class Player:
-  def __init__(self, id, name, mu, sigma):
-    self.id = id
-    self.name = name
-    self.trueskill = Rating(mu, sigma)
 
-  @property
-  def mu(self): return self.trueskill.mu
-  @property
-  def sigma(self): return self.trueskill.sigma
+class Player:
+    def __init__(self, id, name, mu, sigma):
+        self.id = id
+        self.name = name
+        self.trueskill = Rating(mu, sigma)
+
+    @property
+    def mu(self):
+        return self.trueskill.mu
+
+    @property
+    def sigma(self):
+        return self.trueskill.sigma
+
 
 class Team:
-  def __init__(self, id, players=None):
-    self.id = id
-    self.players = players or []
+    def __init__(self, id, players=None):
+        self.id = id
+        self.players = players or []
+
 
 class Match:
-  def __init__(self, id, match_teams=None, datetime=dt.now().isoformat(timespec='minutes')):
-    self.id = id
-    self.datetime = datetime or dt.now().isoformat(timespec='minutes')
-    self.match_teams = match_teams or []
+    def __init__(self, id, match_teams=None, datetime=None):
+        self.id = id
+        self.datetime = datetime or dt.now().isoformat(timespec="minutes")
+        self.match_teams = match_teams or []
 
-  def apply_results(self):
-    teams = [entry['team'].players for entry in self.match_teams]
-    ranks = [entry['place'] for entry in self.match_teams] if len(teams) > 2 else None
-    update_ratings(*teams) if ranks is None else update_ratings(*teams, ranks=ranks)
+    def apply_results(self):
+        teams = [entry["team"].players for entry in self.match_teams]
+        ranks = (
+            [entry["place"] for entry in self.match_teams] if len(teams) > 2 else None
+        )
+        update_ratings(*teams) if ranks is None else update_ratings(*teams, ranks=ranks)
