@@ -382,46 +382,50 @@ def save_db():
     conn.close()
 
 
-def export_db(json_path="league.json"):
-    players_data = [
-        {"id": p.id, "name": p.name, "mu": p.mu, "sigma": p.sigma} for p in players
-    ]
-    teams_data = [{"id": t.id, "players": [p.id for p in t.players]} for t in teams]
-    matches_data = [
-        {
-            "id": m.id,
-            "datetime": m.datetime,
-            "match_teams": [
-                {"team_id": mt["team"].id, "place": mt["place"], "score": mt["score"]}
-                for mt in m.match_teams
-            ],
-        }
-        for m in matches
-    ]
+def regenerate_player_days_up_to(date_str, players, matches):
+    """Rebuild player_days up to and including the given date using cumulative logic."""
+    cutoff = datetime.fromisoformat(date_str)
 
-    # Fetch player_days directly from the DB
+    # Sort matches up to cutoff
+    matches_sorted = sorted(
+        [m for m in matches if datetime.fromisoformat(m.datetime) <= cutoff],
+        key=lambda m: m.datetime,
+    )
+
+    # Prepare DB connection and clear affected player_days
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    c.execute("SELECT player_id, date, mu, sigma FROM player_days")
-    player_days_data = [
-        {"player_id": pid, "date": date, "mu": mu, "sigma": sigma}
-        for pid, date, mu, sigma in c.fetchall()
-    ]
+    match_dates = sorted(set(m.datetime.split("T")[0] for m in matches_sorted))
+    for d in match_dates:
+        c.execute("DELETE FROM player_days WHERE date = ?", (d,))
+
+    # Reset ratings
+    for p in players:
+        p.trueskill = Rating()
+
+    # Apply results and take snapshots per day
+    current_snapshot_date = None
+    for match in matches_sorted:
+        match_date = match.datetime.split("T")[0]
+        match.apply_results()
+
+        if match_date != current_snapshot_date:
+            current_snapshot_date = match_date
+            for p in players:
+                c.execute(
+                    "INSERT INTO player_days (player_id, date, mu, sigma) VALUES (?, ?, ?, ?)",
+                    (p.id, match_date, p.mu, p.sigma),
+                )
+
+    conn.commit()
     conn.close()
+    print(f"Regenerated player days up to {date_str}")
 
-    with open(json_path, "w", encoding="utf-8") as f:
-        json.dump(
-            {
-                "players": players_data,
-                "teams": teams_data,
-                "matches": matches_data,
-                "player_days": player_days_data,
-            },
-            f,
-            indent=2,
-        )
 
-    print(f"Database exported to {json_path}")
+def regenerate_all_player_days():
+    """Regenerates player_days for all match dates up to today."""
+    today = datetime.now().date().isoformat()
+    regenerate_player_days_up_to(today, players, matches)
 
 
 def import_db(json_path="league.json"):
@@ -469,77 +473,43 @@ def import_db(json_path="league.json"):
     print(f"Database imported from {json_path}")
 
 
-def regenerate_player_days_up_to(date_str, players, matches):
-    from trueskill import Rating
-    from datetime import datetime
+def export_db(json_path="league.json"):
+    players_data = [
+        {"id": p.id, "name": p.name, "mu": p.mu, "sigma": p.sigma} for p in players
+    ]
+    teams_data = [{"id": t.id, "players": [p.id for p in t.players]} for t in teams]
+    matches_data = [
+        {
+            "id": m.id,
+            "datetime": m.datetime,
+            "match_teams": [
+                {"team_id": mt["team"].id, "place": mt["place"], "score": mt["score"]}
+                for mt in m.match_teams
+            ],
+        }
+        for m in matches
+    ]
 
-    # Reset all player ratings
-    for p in players:
-        p.trueskill = Rating()
-
-    cutoff = datetime.fromisoformat(date_str)
-
-    # Group matches by date (up to and including cutoff)
-    matches_sorted = sorted(
-        [m for m in matches if datetime.fromisoformat(m.datetime) <= cutoff],
-        key=lambda m: m.datetime,
-    )
-
+    # Fetch player_days directly from the DB
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-
-    # Clear existing snapshots for affected dates
-    match_dates = sorted(set(m.datetime.split("T")[0] for m in matches_sorted))
-    for d in match_dates:
-        c.execute("DELETE FROM player_days WHERE date = ?", (d,))
-
-    # Process matches and take snapshots per date
-    current_date = None
-    for match in matches_sorted:
-        match_date = match.datetime.split("T")[0]
-
-        match.apply_results()
-
-        if match_date != current_date:
-            # New day = save snapshot
-            current_date = match_date
-            for p in players:
-                c.execute(
-                    "INSERT INTO player_days (player_id, date, mu, sigma) VALUES (?, ?, ?, ?)",
-                    (p.id, match_date, p.mu, p.sigma),
-                )
-
-    conn.commit()
+    c.execute("SELECT player_id, date, mu, sigma FROM player_days")
+    player_days_data = [
+        {"player_id": pid, "date": date, "mu": mu, "sigma": sigma}
+        for pid, date, mu, sigma in c.fetchall()
+    ]
     conn.close()
-    print(f"Regenerated player days up to {date_str}")
 
+    with open(json_path, "w", encoding="utf-8") as f:
+        json.dump(
+            {
+                "players": players_data,
+                "teams": teams_data,
+                "matches": matches_data,
+                "player_days": player_days_data,
+            },
+            f,
+            indent=2,
+        )
 
-def regenerate_all_player_days():
-    # Get all unique dates from matches
-    unique_dates = sorted(set(m.datetime.split("T")[0] for m in matches))
-
-    for date_str in unique_dates:
-        # Reset ratings
-        for p in players:
-            p.trueskill = Rating()
-
-    # Replay all matches up to and including this date
-    matches_to_replay = sorted(
-        [m for m in matches if m.datetime.split("T")[0] <= date_str],
-        key=lambda m: m.datetime,
-    )
-
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    for m in matches_to_replay:
-        m.apply_results()
-
-        # Save snapshot for this date
-        c.execute("DELETE FROM player_days WHERE date = ?", (date_str,))
-        for p in players:
-            c.execute(
-                "INSERT INTO player_days (player_id, date, mu, sigma) VALUES (?, ?, ?, ?)",
-                (p.id, date_str, p.mu, p.sigma),
-            )
-    conn.commit()
-    conn.close()
+    print(f"Database exported to {json_path}")
