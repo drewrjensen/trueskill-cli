@@ -2,7 +2,7 @@
 #
 # This file is part of the TrueSkill CLI project.
 #
-# Copyright (C) 2024 Drew Jensen
+# Copyright (C) 2025 Drew Jensen
 #
 # TrueSkill CLI is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,10 +18,10 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import argparse
-from cli import run_cli
-from db import init_db, set_db_path
+from cli.dispatch import run_cli
+from db.storage import init_db, set_db_path
 
-VERSION = "v1.3.1"
+VERSION = "v1.4.0"
 
 
 def main():

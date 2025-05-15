@@ -3,6 +3,7 @@
 # --------------------
 *.exe
 *.spec
+main
 build/
 dist/
 output/
