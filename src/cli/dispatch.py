@@ -5,7 +5,7 @@ from db.serialization import export_db, import_db
 from cli.players import add_player, list_players, delete_player
 from cli.matches import add_match, list_matches, edit_match, delete_match
 from cli.rankings import show_rankings, show_rankings_for_date
-from cli.undo import undo
+from cli.util import undo
 from cli.snapshots import rebuild_all_snapshots
 
 

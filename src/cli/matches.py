@@ -12,11 +12,6 @@ from ratings import recalculate_ratings_from, update_ratings
 from cli.util import find_player, parse_participants, save
 
 
-players = DBState.players
-teams = DBState.teams
-matches = DBState.matches
-
-
 def add_match(input_str, datetime_override=None):
     try:
         parsed, scores = parse_participants(input_str)
@@ -32,13 +27,13 @@ def add_match(input_str, datetime_override=None):
 
         update_ratings(*resolved)
 
-        match_id = max((m.id for m in matches), default=0) + 1
+        match_id = max((m.id for m in DBState.matches), default=0) + 1
         match = Match(id=match_id)
 
         for place, team_players in enumerate(resolved, start=1):
-            team_id = max((t.id for t in teams), default=0) + 1
+            team_id = max((t.id for t in DBState.teams), default=0) + 1
             team = Team(id=team_id, players=team_players)
-            teams.append(team)
+            DBState.teams.append(team)
             score = scores[place - 1] if len(scores) >= place else None
             match.match_teams.append({"team": team, "place": place, "score": score})
 
@@ -48,23 +43,23 @@ def add_match(input_str, datetime_override=None):
             else datetime.now().isoformat(timespec="minutes")
         )
 
-        matches.append(match)
+        DBState.matches.append(match)
         save()
         print(f"Match recorded at {match.datetime}")
 
         match_date = match.datetime.split("T")[0]
-        regenerate_player_days_up_to(match_date, players, matches)
+        regenerate_player_days_up_to(match_date)
 
     except Exception as e:
         print(f"Error adding match: {e}")
 
 
 def list_matches():
-    if not matches:
+    if not DBState.matches:
         print("No matches recorded.")
         return
     grouped = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
-    for match in matches:
+    for match in DBState.matches:
         dt = datetime.fromisoformat(match.datetime)
         grouped[dt.year][dt.month][dt.day].append(match)
     for year in sorted(grouped):
@@ -91,7 +86,7 @@ def list_matches():
 def edit_match(match_id_str):
     try:
         match_id = int(match_id_str)
-        match = next(m for m in matches if m.id == match_id)
+        match = next(m for m in DBState.matches if m.id == match_id)
     except (ValueError, StopIteration):
         print(f"No match found with ID {match_id_str}")
         return
@@ -102,7 +97,7 @@ def edit_match(match_id_str):
         score_str = f" (score: {entry['score']})" if entry["score"] is not None else ""
         print(f"  {i}. {names}{score_str}")
 
-    player_names = [p.name for p in players]
+    player_names = [p.name for p in DBState.players]
     player_completer = WordCompleter(player_names, ignore_case=True)
 
     try:
@@ -122,9 +117,9 @@ def edit_match(match_id_str):
             if resolved:
                 match.match_teams = []
                 for place, team_players in enumerate(resolved, start=1):
-                    team_id = max((t.id for t in teams), default=0) + 1
+                    team_id = max((t.id for t in DBState.teams), default=0) + 1
                     team = Team(id=team_id, players=team_players)
-                    teams.append(team)
+                    DBState.teams.append(team)
                     score = scores[place - 1] if len(scores) >= place else None
                     match.match_teams.append(
                         {"team": team, "place": place, "score": score}
@@ -140,12 +135,12 @@ def edit_match(match_id_str):
             except ValueError:
                 print("Invalid datetime format. Keeping existing time.")
 
-        recalculate_ratings_from(match.datetime, players, matches)
+        recalculate_ratings_from(match.datetime)
         save()
         print("Match updated.")
 
         match_date = match.datetime.split("T")[0]
-        regenerate_player_days_up_to(match_date, players, matches)
+        regenerate_player_days_up_to(match_date)
 
     except Exception as e:
         print(f"Failed to edit match: {e}")
@@ -154,15 +149,15 @@ def edit_match(match_id_str):
 def delete_match(match_id_str):
     try:
         match_id = int(match_id_str)
-        match = next(m for m in matches if m.id == match_id)
+        match = next(m for m in DBState.matches if m.id == match_id)
         match_date = match.datetime.split("T")[0]
-        matches.remove(match)
+        DBState.matches.remove(match)
 
-        recalculate_ratings_from(match.datetime, players, matches)
+        recalculate_ratings_from(match.datetime)
         save()
         print(f"Match {match_id} deleted.")
 
-        regenerate_player_days_up_to(match_date, players, matches)
+        regenerate_player_days_up_to(match_date)
 
     except (ValueError, StopIteration):
         print(f"No match found with ID {match_id_str}")

@@ -1,10 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import sqlite3
-from datetime import datetime
 from db.storage import DB_PATH, DBState
-
-players = DBState.players
 
 
 def show_rankings_for_date(date_str):
@@ -44,7 +41,18 @@ def show_rankings_for_date(date_str):
 
 
 def show_rankings():
-    if not players:
+    if not DBState.players:
         print("No players found.")
         return
-    show_rankings_for_date(datetime.now().date().isoformat())
+
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT MAX(date) FROM player_days")
+    result = c.fetchone()
+    conn.close()
+
+    latest_date = result[0] if result else None
+    if latest_date:
+        show_rankings_for_date(latest_date)
+    else:
+        print("No ranking snapshots available.")

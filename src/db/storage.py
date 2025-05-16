@@ -15,11 +15,6 @@ class DBState:
     matches = []
 
 
-players = DBState.players
-teams = DBState.teams
-matches = DBState.matches
-
-
 def set_db_path(path):
     global DB_PATH
     DB_PATH = path
@@ -44,28 +39,28 @@ def load_db():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
 
+    DBState.players.clear()
     c.execute("SELECT id, name, mu, sigma FROM players")
-    players.clear()
-    players.extend(Player(*row) for row in c.fetchall())
+    DBState.players.extend(Player(*row) for row in c.fetchall())
 
+    DBState.teams.clear()
     c.execute("SELECT id FROM teams")
-    teams.clear()
-    teams.extend(Team(row[0]) for row in c.fetchall())
+    DBState.teams.extend(Team(row[0]) for row in c.fetchall())
 
     c.execute("SELECT team_id, player_id FROM team_players")
     for team_id, player_id in c.fetchall():
-        team = next(t for t in teams if t.id == team_id)
-        player = next(p for p in players if p.id == player_id)
+        team = next(t for t in DBState.teams if t.id == team_id)
+        player = next(p for p in DBState.players if p.id == player_id)
         team.players.append(player)
 
+    DBState.matches.clear()
     c.execute("SELECT id, datetime FROM matches")
-    matches.clear()
-    matches.extend(Match(id=row[0], datetime=row[1]) for row in c.fetchall())
+    DBState.matches.extend(Match(id=row[0], datetime=row[1]) for row in c.fetchall())
 
     c.execute("SELECT match_id, team_id, place, score FROM match_teams")
     for match_id, team_id, place, score in c.fetchall():
-        match = next(m for m in matches if m.id == match_id)
-        team = next(t for t in teams if t.id == team_id)
+        match = next(m for m in DBState.matches if m.id == match_id)
+        team = next(t for t in DBState.teams if t.id == team_id)
         match.match_teams.append({"team": team, "place": place, "score": score})
 
     conn.close()
@@ -79,18 +74,18 @@ def save_db():
     c = conn.cursor()
 
     c.execute("DELETE FROM players")
-    for p in players:
+    for p in DBState.players:
         c.execute(
             "INSERT INTO players (id, name, mu, sigma) VALUES (?, ?, ?, ?)",
             (p.id, p.name, p.mu, p.sigma),
         )
 
     c.execute("DELETE FROM teams")
-    for t in teams:
+    for t in DBState.teams:
         c.execute("INSERT INTO teams (id) VALUES (?)", (t.id,))
 
     c.execute("DELETE FROM team_players")
-    for t in teams:
+    for t in DBState.teams:
         for p in t.players:
             c.execute(
                 "INSERT INTO team_players (team_id, player_id) VALUES (?, ?)",
@@ -98,13 +93,13 @@ def save_db():
             )
 
     c.execute("DELETE FROM matches")
-    for m in matches:
+    for m in DBState.matches:
         c.execute(
             "INSERT INTO matches (id, datetime) VALUES (?, ?)", (m.id, m.datetime)
         )
 
     c.execute("DELETE FROM match_teams")
-    for m in matches:
+    for m in DBState.matches:
         for mt in m.match_teams:
             c.execute(
                 "INSERT INTO match_teams (match_id, team_id, place, score) VALUES (?, ?, ?, ?)",

@@ -7,16 +7,12 @@ from db.storage import DB_PATH, DBState
 from models import Player, Team, Match
 from db.player_days import regenerate_all_player_days
 
-players = DBState.players
-teams = DBState.teams
-matches = DBState.matches
-
 
 def export_db(json_path="league.json"):
     players_data = [
-        {"id": p.id, "name": p.name, "mu": p.mu, "sigma": p.sigma} for p in players
+        {"id": p.id, "name": p.name, "mu": p.mu, "sigma": p.sigma} for p in DBState.players
     ]
-    teams_data = [{"id": t.id, "players": [p.id for p in t.players]} for t in teams]
+    teams_data = [{"id": t.id, "players": [p.id for p in t.players]} for t in DBState.teams]
     matches_data = [
         {
             "id": m.id,
@@ -26,7 +22,7 @@ def export_db(json_path="league.json"):
                 for mt in m.match_teams
             ],
         }
-        for m in matches
+        for m in DBState.matches
     ]
 
     conn = sqlite3.connect(DB_PATH)
@@ -62,21 +58,21 @@ def import_db(json_path="league.json"):
         data = json.load(f)
 
     id_to_player = {}
-    players.clear()
+    DBState.players.clear()
     for p in data["players"]:
         player = Player(p["id"], p["name"], p["mu"], p["sigma"])
         id_to_player[p["id"]] = player
-        players.append(player)
+        DBState.players.append(player)
 
     id_to_team = {}
-    teams.clear()
+    DBState.teams.clear()
     for t in data["teams"]:
         team_players = [id_to_player[pid] for pid in t["players"]]
         team = Team(t["id"], players=team_players)
         id_to_team[t["id"]] = team
-        teams.append(team)
+        DBState.teams.append(team)
 
-    matches.clear()
+    DBState.matches.clear()
     for m in data["matches"]:
         match_teams = []
         for mt in m["match_teams"]:
@@ -88,7 +84,7 @@ def import_db(json_path="league.json"):
                 }
             )
         match = Match(m["id"], match_teams, datetime=m["datetime"])
-        matches.append(match)
+        DBState.matches.append(match)
 
     regenerate_all_player_days()
     print(f"Database imported from {json_path}")

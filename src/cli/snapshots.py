@@ -1,8 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-import db
-
+from db.player_days import regenerate_all_player_days
 
 def rebuild_all_snapshots():
-    db.regenerate_all_player_days()
+    regenerate_all_player_days()
     print("Rebuilt player_days table for all match dates.")

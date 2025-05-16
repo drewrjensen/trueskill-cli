@@ -2,7 +2,7 @@
 #
 # This file is part of the TrueSkill CLI project.
 #
-# Copyright (C) 2024 Drew Jensen
+# Copyright (C) 2025 Drew Jensen
 #
 # TrueSkill CLI is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -35,20 +35,22 @@ def update_ratings(*args, ranks=None):
                 player.trueskill = new_rating
 
 
-def recalculate_all_ratings(players, matches):
+def recalculate_all_ratings():
+    from db.storage import DBState
     # Reset all player ratings to default
-    for player in players:
+    for player in DBState.players:
         player.trueskill = Rating()  # default mu=25.0, sigma=8.333...
 
     # Reapply all match results in chronological order
-    matches_sorted = sorted(matches, key=lambda m: m.datetime)
+    matches_sorted = sorted(DBState.matches, key=lambda m: m.datetime)
     for match in matches_sorted:
         match.apply_results()
 
 
-def recalculate_ratings_from(match_point, players, matches):
+def recalculate_ratings_from(match_point):
+    from db.storage import DBState
     # Step 1: Collect matches at or after match_point
-    matches_to_recalc = [m for m in matches if m.datetime >= match_point]
+    matches_to_recalc = [m for m in DBState.matches if m.datetime >= match_point]
 
     # Step 2: Identify affected player ids
     affected_player_ids = set()
@@ -58,7 +60,7 @@ def recalculate_ratings_from(match_point, players, matches):
                 affected_player_ids.add(player.id)
 
     # Step 3: Reset affected players only
-    affected_players = [p for p in players if p.id in affected_player_ids]
+    affected_players = [p for p in DBState.players if p.id in affected_player_ids]
     for p in affected_players:
         p.trueskill = Rating()
 

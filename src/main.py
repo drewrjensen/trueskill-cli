@@ -21,7 +21,7 @@ import argparse
 from cli.dispatch import run_cli
 from db.storage import init_db, set_db_path
 
-VERSION = "v1.4.1"
+VERSION = "v1.4.2"
 
 
 def main():
