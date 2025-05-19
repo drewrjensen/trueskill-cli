@@ -21,7 +21,7 @@ import argparse
 from cli.dispatch import run_cli
 from db.storage import init_db, set_db_path
 
-VERSION = "v1.4.2"
+VERSION = "v1.4.3"
 
 
 def main():
@@ -108,7 +108,7 @@ def main():
     set_db_path(args.db_path)
     init_db()
 
-    if args.cmd is None:
+    if args.cmd is None or args.cmd == "help":
         parser.print_help()
     else:
         run_cli(args)

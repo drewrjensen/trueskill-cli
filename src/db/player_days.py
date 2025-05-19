@@ -6,6 +6,7 @@ from datetime import datetime, time
 from trueskill import Rating
 from db.storage import DB_PATH, DBState
 
+
 def regenerate_player_days_up_to(date_str):
     cutoff = datetime.combine(datetime.fromisoformat(date_str), time(23, 59, 59))
     matches = DBState.matches
@@ -39,17 +40,16 @@ def regenerate_player_days_up_to(date_str):
         match.apply_results()
 
         # Only print once per date
-        if match_date != previous_date:
-            print(f"Applying matches for {match_date}...")
-            previous_date = match_date
+        # if match_date != previous_date:
+        #     print(f"Applying matches for {match_date}...")
+        #     previous_date = match_date
 
         # Save snapshot if:
         # - It's the last match, or
         # - The next match is on a different date
-        is_last_match = (i == len(matches_sorted) - 1)
+        is_last_match = i == len(matches_sorted) - 1
         next_match_date = (
-            matches_sorted[i + 1].datetime.split("T")[0]
-            if not is_last_match else None
+            matches_sorted[i + 1].datetime.split("T")[0] if not is_last_match else None
         )
         if is_last_match or next_match_date != match_date:
             for p in DBState.players:
@@ -57,11 +57,11 @@ def regenerate_player_days_up_to(date_str):
                     "INSERT INTO player_days (player_id, date, mu, sigma) VALUES (?, ?, ?, ?)",
                     (p.id, match_date, p.mu, p.sigma),
                 )
-            print(f"Snapshot saved for {match_date}")
+            # print(f"Snapshot saved for {match_date}")
 
     conn.commit()
     conn.close()
-    print(f"Regenerated player_days up to {date_str}")
+    # print(f"Regenerated player_days up to {date_str}")
 
 
 def regenerate_all_player_days():
@@ -72,4 +72,3 @@ def regenerate_all_player_days():
 
     latest_date = max(m.datetime.split("T")[0] for m in DBState.matches)
     regenerate_player_days_up_to(latest_date)
-
