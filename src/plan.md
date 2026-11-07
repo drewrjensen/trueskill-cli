@@ -1,0 +1,4 @@
+* change match entry to require json format in grammer `((team | player)(: score)?){2,}, where input is symetric with scores, meaning scores must be defined for all teams/players, or for none. Teams and players may be mixed in a match, such as where player1 vs [player2, player3], where players 2 and 3 are in a team against player 1. Matches without scores generate scores based on the order, where player1:score(n-1), player2:score(n-2), ..., playerLast:score(0)
+* Use Player, Team classes. Matches are dicts of Player|Team : score
+* Add Rankings table to db - timeseries, [playername: string, score: float, uncertainty: float, datetime]
+* Update output rankings table md file to add green up-arrow (↑), gray em-dash (—), and red down-arrow (↓) to reflect improvements in score, unchanged score, or decayed score, respectively.

@@ -23,7 +23,7 @@ from trueskill import Rating
 
 
 class Player:
-    def __init__(self, id, name, mu, sigma):
+    def __init__(self, id: int, name: str, mu: float, sigma: float):
         self.id = id
         self.name = name
         self.trueskill = Rating(mu, sigma)
