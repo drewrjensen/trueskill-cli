@@ -18,40 +18,39 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from datetime import datetime as dt
-from ratings import update_ratings
 from trueskill import Rating
 
 
 class Player:
-    def __init__(self, id, name, mu, sigma):
+    def __init__(self, id: int, name: str, mu: float, sigma: float):
         self.id = id
         self.name = name
         self.trueskill = Rating(mu, sigma)
 
     @property
-    def mu(self):
+    def mu(self) -> float:
         return self.trueskill.mu
 
     @property
-    def sigma(self):
+    def sigma(self) -> float:
         return self.trueskill.sigma
 
 
 class Team:
-    def __init__(self, id, players=None):
+    def __init__(self, id: int, players: list[Player]):
         self.id = id
-        self.players = players or []
+        self.players = players
 
 
 class Match:
-    def __init__(self, id, match_teams=None, datetime=None):
+    def __init__(self, id: int, match_teams: list[Team], datetime: dt = dt.now()):
         self.id = id
         self.datetime = datetime or dt.now().isoformat(timespec="minutes")
         self.match_teams = match_teams or []
 
-    def apply_results(self):
-        teams = [entry["team"].players for entry in self.match_teams]
-        ranks = (
-            [entry["place"] for entry in self.match_teams] if len(teams) > 2 else None
-        )
-        update_ratings(*teams) if ranks is None else update_ratings(*teams, ranks=ranks)
+    # def apply_results(self):
+    #     teams = [entry["team"].players for entry in self.match_teams]
+    #     ranks = (
+    #         [entry["place"] for entry in self.match_teams] if len(teams) > 2 else None
+    #     )
+    #     update_ratings(*teams) if ranks is None else update_ratings(*teams, ranks=ranks)

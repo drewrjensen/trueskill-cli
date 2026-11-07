@@ -18,100 +18,20 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import argparse
-from cli.dispatch import run_cli
-from db.storage import init_db, set_db_path
+from argparse import Namespace
 
-VERSION = "v1.4.3"
+VERSION = "v2.0.0"
 
 
 def main():
-    parser = argparse.ArgumentParser(description="TrueSkill League CLI")
-    parser.add_argument(
-        "--version", action="version", version=f"TrueSkill CLI {VERSION}"
+    parser = argparse.ArgumentParser(
+        description="TrueSkill CLI - A command-line interface for TrueSkill rating system"
     )
-    parser.add_argument(
-        "--db-path",
-        default="league.db",
-        help="Path to database file (default: league.db)",
-    )
-    sub = parser.add_subparsers(dest="cmd", help="Primary commands")
-
-    # players
-    players_parser = sub.add_parser("players", help="Manage players")
-    players_parser.add_argument(
-        "action",
-        choices=["list", "add", "delete"],
-        nargs="?",
-        default="list",
-        help="Action to perform",
-    )
-    players_parser.add_argument("name", nargs="?", help="Player name(s)")
-
-    # rankings
-    rankings_parser = sub.add_parser("rankings", help="Show current player rankings")
-    rankings_parser.add_argument(
-        "--date", help="Show rankings snapshot for specific date (YYYY-MM-DD)"
-    )
-
-    # matches
-    matches_parser = sub.add_parser("matches", help="Manage matches")
-    matches_parser.add_argument(
-        "action",
-        choices=["add", "list", "edit", "delete"],
-        nargs="?",
-        default="list",
-        help="Action to perform",
-    )
-    matches_parser.add_argument(
-        "arg",
-        nargs="?",
-        help="Argument for action (participants for add, match_id for edit/delete)",
-    )
-    matches_parser.add_argument(
-        "--time", help="Optional ISO datetime (e.g., 2025-04-27T14:30) for matches add"
-    )
-    matches_parser.add_argument(
-        "--scores", help="Comma-separated numeric scores for each team (e.g. 20,15,10)"
-    )
-
-    # undo
-    sub.add_parser("undo", help="Undo last operation")
-
-    # import/export
-    import_parser = sub.add_parser(
-        "import", help="Import database from JSON (regenerates player_days if missing)"
-    )
-    import_parser.add_argument(
-        "path",
-        nargs="?",
-        default="league.json",
-        help="Path to JSON file (default: league.json)",
-    )
-
-    export_parser = sub.add_parser(
-        "export", help="Export database to JSON (includes player_days if available)"
-    )
-    export_parser.add_argument(
-        "path",
-        nargs="?",
-        default="league.json",
-        help="Path to export JSON file (default: league.json)",
-    )
-
-    # rebuild snapshots
-    sub.add_parser(
-        "rebuild-snapshots", help="Regenerate player_days for all unique match dates"
-    )
-
-    args = parser.parse_args()
-
-    set_db_path(args.db_path)
-    init_db()
-
-    if args.cmd is None or args.cmd == "help":
-        parser.print_help()
-    else:
-        run_cli(args)
+    parser.add_argument("--version", action="version", version=f"%(prog)s {VERSION}")
+    # Add more arguments and subcommands as needed
+    args: Namespace = parser.parse_args()
+    # Handle the parsed arguments and execute the appropriate functionality
+    print(f"TrueSkill CLI {VERSION} - Arguments: {args}")
 
 
 if __name__ == "__main__":
