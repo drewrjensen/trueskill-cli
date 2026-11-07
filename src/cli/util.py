@@ -2,6 +2,7 @@
 
 import copy
 
+import json
 from rapidfuzz import process
 from db.storage import DBState, save_db
 
@@ -20,42 +21,20 @@ def find_player(name):
     return None
 
 
-def parse_participants(input_str):
-    participants = []
-    scores = []
-    buffer = ""
-    inside_team = False
-    tokens = input_str.split()
+def parse_match(input_str):
+    # String input JSON grammar:
+    ## ((Team | Participant)(: Score)?){2,}
+    # JSON must be symmetrical, meaning that if one team/participants has a score, the others must have a score as well.
 
-    i = 0
-    while i < len(tokens):
-        token = tokens[i]
-        if token.startswith("score:"):
-            scores = [int(s) for s in token[6:].split(",")]
-        else:
-            for char in token:
-                if char == "[":
-                    inside_team = True
-                    buffer = ""
-                elif char == "]":
-                    inside_team = False
-                    team = [name.strip() for name in buffer.split(",") if name.strip()]
-                    participants.append(team)
-                    buffer = ""
-                elif char == "," and not inside_team:
-                    if buffer.strip():
-                        participants.append([buffer.strip()])
-                    buffer = ""
-                else:
-                    buffer += char
-            if buffer.strip():
-                participants.append([buffer.strip()])
-                buffer = ""
-        i += 1
+    match = json.loads(input_str)
+    if not isinstance(match, list) or len(match) < 2:
+        raise ValueError("Match must be a list of at least two teams/participants.")
 
-    return participants, scores
+    return match
+
 
 previous_state = None
+
 
 def save():
     global previous_state
@@ -72,6 +51,8 @@ def undo():
     if previous_state is None:
         print("No operation to undo.")
         return
-    DBState.players[:], DBState.teams[:], DBState.matches[:] = copy.deepcopy(previous_state)
+    DBState.players[:], DBState.teams[:], DBState.matches[:] = copy.deepcopy(
+        previous_state
+    )
     save_db()
     print("Last operation undone.")

@@ -9,21 +9,35 @@ from db.storage import DBState
 from db.player_days import regenerate_player_days_up_to
 from models import Match, Team
 from ratings import recalculate_ratings_from, update_ratings
-from cli.util import find_player, parse_participants, save
+from cli.util import find_player, parse_match, save
 
+def player_exists(name):
+    player = find_player(name)
+    if not player:
+        raise ValueError(f"Player '{name}' does not exist.")
+    return True
 
 def add_match(input_str, datetime_override=None):
     try:
-        parsed, scores = parse_participants(input_str)
-        resolved = []
-        for team in parsed:
-            players_in_team = []
-            for name in team:
-                player = find_player(name)
-                if not player:
-                    raise ValueError(f"Player '{name}' does not exist.")
-                players_in_team.append(player)
-            resolved.append(players_in_team)
+        match = parse_match(input_str)
+        # resolved = []
+        # for team in parsed:
+        #     players_in_team = []
+        #     for name in team:
+        #         player = find_player(name)
+        #         if not player:
+        #             raise ValueError(f"Player '{name}' does not exist.")
+        #         players_in_team.append(player)
+        #     resolved.append(players_in_team)
+
+        for entry in match:
+            # check if team
+            if isinstance(entry, list):
+                for name in entry:
+                    if player_exists
+            else:
+                if not find_player(entry):
+                    raise ValueError(f"Player '{entry}' does not exist.")
 
         update_ratings(*resolved)
 
@@ -106,7 +120,7 @@ def edit_match(match_id_str):
             completer=player_completer,
         )
         if new_input.strip():
-            entries, scores = parse_participants(new_input)
+            match = parse_match(new_input)
             resolved = []
             for entry in entries:
                 team = [find_player(name) for name in entry]

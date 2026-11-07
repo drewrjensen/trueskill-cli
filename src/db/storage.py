@@ -9,10 +9,24 @@ from models import Player, Team, Match
 DB_PATH = "league.db"
 
 
+class Player:
+    def __init__(self, id, name, mu, sigma):
+        self.id = id
+        self.name = name
+        self.mu = mu
+        self.sigma = sigma
+
+
+class Team:
+    def __init__(self, id, players=[]):
+        self.id = id
+        self.players = players
+
+
 class DBState:
-    players = []
-    teams = []
-    matches = []
+    players: list[Player] = []
+    teams: list[Player] = []
+    matches: dict[Player | Team, int] = []
 
 
 def set_db_path(path):
